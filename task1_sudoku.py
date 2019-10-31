@@ -49,9 +49,9 @@ puzzleProblem4 = [
 #puzzle to solve, 0s indicate empty
 
 puzzleProblem = np.array(puzzleProblem4)
-puzzleProblemT = puzzleProblem.T
+
 fixedValues = []
-fixedValuesT = []
+
 #determine what the index of the 0 values of the puzzle are, for crossover
 for r in puzzleProblem:
     rArr = []
@@ -59,21 +59,15 @@ for r in puzzleProblem:
         if c == 0:
             rArr.append(idx)
     fixedValues.append(rArr)
-for r in puzzleProblemT:
-    rArr = []
-    for idx, c in enumerate(r):
-        if c == 0:
-            rArr.append(idx)
-    fixedValuesT.append(rArr)
+
 print(fixedValues)
-print(fixedValuesT)
 
 #get the size of the board
 N = int(math.sqrt(len(puzzleProblem)))
 
 # SETUP PARAMS
-POPULATION_SIZE = 100
-NUM_GENERATIONS = 5000
+POPULATION_SIZE = 3
+NUM_GENERATIONS = 500
 MUTATION_RATE = 0.5
 
 # initialize the population
@@ -171,36 +165,29 @@ class SudokuGA():
             child1end = child1Alleles[crossOverPoint:len(fixedValues) - 1]
             child2end = child2Alleles[crossOverPoint:len(fixedValues) - 1]
             
-            child1Alleles = child2prev + child2end
-            child2Alleles = child1prev + child1end
-                
-            #actually set the values
-            for i in range(0, len(child1Alleles)):
-                child[rowToCrossIdx][fixedValues[rowToCrossIdx][i]] = child1Alleles[i]
-                child2[rowToCrossIdx][fixedValues[rowToCrossIdx][i]] = child2Alleles[i]
+            child1Alleles = child1prev + child2end
+            child2Alleles = child2prev + child1end
 
-        colToCrossIdx =  random.randint(0, N**2 - 1)
-        colToCross = fixedValuesT[colToCrossIdx]
-        
-        if len(colToCross) > 1:
-            crossOverPoint = random.randint(0, len(rowToCross) - 1)
-            
-            child1Alleles = []
-            child2Alleles = []
-            for i in range(0, len(rowToCross)):
-                child1Alleles.append(child[rowToCrossIdx][fixedValues[rowToCrossIdx][i]])
-                child2Alleles.append(child2[rowToCrossIdx][fixedValues[rowToCrossIdx][i]])
-                
+            #print(child1Alleles)
+            #print(child2Alleles)
+            #check for duplicate values before commiting
+            alleleDiff = list(set(child1Alleles) - set(child2Alleles)) + list(set(child2Alleles) - set(child1Alleles))
+            #print(alleleDiff)
+            if len(alleleDiff) > 0:
+                for er in alleleDiff:
+                    if child2Alleles.count(er) < 1:
+                        #was not found, so append
+                        child2Alleles.append(er)
 
-            child1prev = child1Alleles[0:crossOverPoint]
-            child2prev = child2Alleles[0:crossOverPoint]
-            
-            child1end = child1Alleles[crossOverPoint:len(fixedValues) - 1]
-            child2end = child2Alleles[crossOverPoint:len(fixedValues) - 1]
-            
-            child1Alleles = child2prev + child2end
-            child2Alleles = child1prev + child1end
-                
+                    if child1Alleles.count(er) < 1:
+                        #was not found, so append
+                        child1Alleles.append(er)
+                    
+            child1Alleles = list(dict.fromkeys(child1Alleles))
+            child2Alleles = list(dict.fromkeys(child2Alleles))
+            #print(child1Alleles)
+            #print(child2Alleles)  
+
             #actually set the values
             for i in range(0, len(child1Alleles)):
                 child[rowToCrossIdx][fixedValues[rowToCrossIdx][i]] = child1Alleles[i]
@@ -210,17 +197,21 @@ class SudokuGA():
 
     # mutate x
     def mutate(self, x):
-        newPuzzle = x
-        rowToChange = random.randint(0, N**2 - 1)
-        opts = fixedValues[rowToChange]
+        child = list(x)
+        rowToCrossIdx =  random.randint(0, len(fixedValues) - 1)
+        rowToCross = fixedValues[rowToCrossIdx]
         
-        if len(opts) >= 2:
-            drawCol = random.choices(population=opts, 
-                k=2)
+        if len(rowToCross) > 1:            
+            childAlleles = []
+            for i in range(0, len(rowToCross)):
+                childAlleles.append(child[rowToCrossIdx][fixedValues[rowToCrossIdx][i]])
+                
+            shuffle(childAlleles)
             
-            newPuzzle[rowToChange][drawCol[0]] = newPuzzle[rowToChange][drawCol[1]]
-        
-        return newPuzzle
+        for i in range(0, len(childAlleles)):
+            child[rowToCrossIdx][fixedValues[rowToCrossIdx][i]] = childAlleles[i]
+
+        return np.array(child)
 
     #select 2 individuals to crossover
     def select(self, population, probabilities, fittest,fittestIndex):
@@ -240,7 +231,7 @@ class SudokuGA():
 
     #find fitness of the indidividual puzzle
     def individualFitness(self, puz):
-        puzError = (N**2)*3
+        puzError = (N**2)*2
         totalError = float(puzError) #want to get the lowest
         #check columns
         for c in puz.T:
@@ -248,9 +239,6 @@ class SudokuGA():
                 puzError = puzError - 1
                 
         #check rows
-        for r in puz:
-            if (N**2) == len(set(r)):
-                puzError = puzError - 1
                 
         #check boxes
         for br in range(0, (N**2),N):
@@ -264,7 +252,10 @@ class SudokuGA():
                 if (N**2) == len(set(box)):
                     puzError = puzError - 1
  
-        return (1-(puzError/totalError))
+        p =(1-(puzError/totalError))
+        if p <= 0:
+            p = 0.00000000000000000000001
+        return p
     
     #find fitness individual
     def fitness(self, population):
@@ -277,7 +268,7 @@ class SudokuGA():
                 fittestIndex = idx
                 fitnessValue = puzFitness
             probs.append(puzFitness*100)
-                
+        print(probs)
         return (fitnessValue, fittestIndex, probs, population[fittestIndex]) 
 
 if __name__ == "__main__":
