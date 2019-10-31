@@ -7,6 +7,8 @@ import random
 import math
 import numpy as np
 from random import shuffle
+import matplotlib.pyplot as plt
+
 random.seed(54)
 
 #sample puzzles. Select the one to solve by entering below in
@@ -48,7 +50,7 @@ puzzleProblem4 = [
         ]
 #puzzle to solve, 0s indicate empty
 
-puzzleProblem = np.array(puzzleProblem4)
+puzzleProblem = np.array(puzzleProblem3)
 
 fixedValues = []
 
@@ -66,8 +68,8 @@ print(fixedValues)
 N = int(math.sqrt(len(puzzleProblem)))
 
 # SETUP PARAMS
-POPULATION_SIZE = 3
-NUM_GENERATIONS = 500
+POPULATION_SIZE = 1000
+NUM_GENERATIONS = 100
 MUTATION_RATE = 0.5
 
 # initialize the population
@@ -106,6 +108,9 @@ class SudokuGA():
         self.initialPopulation = p
 
     def run(self):
+        #data eval stuff
+        topFitnesses = []
+        
         population = self.initialPopulation
         fitnessEval = self.fitness(population)
         generation = 0
@@ -113,7 +118,7 @@ class SudokuGA():
         print("---- Generation: %s - Fitness: %s ----" % (generation, round(fitnessEval[0],3) ))    
         while not (self.terminate(fitnessEval[0], generation)):
             new_population = []
-            
+            new_population.append(solution)
             for i in range(0, POPULATION_SIZE):
                 #select
                 parent1,parent2 = self.select(population, fitnessEval[2], solution, fitnessEval[1])
@@ -124,6 +129,7 @@ class SudokuGA():
                 #mutate
                 if ( random.uniform(0, 1.0) <= MUTATION_RATE):
                     newpuz = self.mutate(newpuz)
+                if ( random.uniform(0, 1.0) <= MUTATION_RATE):
                     newpuz2 = self.mutate(newpuz2)
                 new_population.append(newpuz2)
                 new_population.append(newpuz)
@@ -133,9 +139,12 @@ class SudokuGA():
             fitnessEval = self.fitness(population)
             generation += 1
             solution = population[fitnessEval[1]]
+            topFitnesses.append(fitnessEval[0])
             #print(solution)
             print("---- Generation: %s - Fitness: %s ----" % (generation, round(fitnessEval[0], 3)))    
-            
+        plt.plot(topFitnesses)
+        plt.ylabel('Fitness')
+        plt.show()
         return solution
         
     # if the algo should terminate
@@ -214,32 +223,42 @@ class SudokuGA():
         return np.array(child)
 
     #select 2 individuals to crossover
-    def select(self, population, probabilities, fittest,fittestIndex):
-        K = 10
-        #print(probabilities)
-        matingpool = list(population)
-        matingpool.pop(fittestIndex)
-        probs = list(probabilities)
-        probs.pop(fittestIndex)
-        draw = random.choices(population=matingpool, 
-                       k=K,
-             weights=probs)
+    def select(self, population, probabilities, fittest, fittestIndex):
+        K = 4
         
-        r1 = fittest
-        r2 = draw[random.randint(0, K-1)]
-        return (r1, r2)
+        draw = random.choices(population=list(range(0, len(probabilities) - 1)) ,
+                              k=K)
+        #sort by fitness and pick 2
+        fitnessesactual = np.array(probabilities)
+        fitnessesactual = list(fitnessesactual[draw])
+        matingpopIdx = np.array(draw)
+        parents = [matingpopIdx for _,matingpopIdx in sorted(zip(fitnessesactual,matingpopIdx))]
+        
+        #print(probabilities)
+        #matingpool = list(population)
+        #matingpool.pop(fittestIndex)
+        #probs = list(probabilities)
+        #probs.pop(fittestIndex)
+        #draw = random.choices(population=matingpool, 
+        #               k=K,
+        #     weights=probs)
+       
+        #r1 = fittest
+        #r2 = draw[random.randint(0, K-1)]
+        return (population[parents[-1]],population[parents[-2]])
 
     #find fitness of the indidividual puzzle
     def individualFitness(self, puz):
-        puzError = (N**2)*2
+        puzError = (N**2)*2 + 2*(N**4)
+        
         totalError = float(puzError) #want to get the lowest
         #check columns
         for c in puz.T:
-            if (N**2) == len(set(c)):
+            unqiue = len(set(c))
+            if (N**2) == unqiue:
                 puzError = puzError - 1
-                
-        #check rows
-                
+            puzError = puzError - unqiue
+
         #check boxes
         for br in range(0, (N**2),N):
             for bc in range(0, (N**2), N):
@@ -248,10 +267,11 @@ class SudokuGA():
                 for i in range(0, N):
                     for z in range(0, N):
                         box.append(puz[br + i][bc + z])
-                
-                if (N**2) == len(set(box)):
+                uniqbox = len(set(box))
+                if (N**2) == uniqbox:
                     puzError = puzError - 1
- 
+                puzError = puzError - uniqbox
+
         p =(1-(puzError/totalError))
         if p <= 0:
             p = 0.00000000000000000000001
@@ -268,7 +288,7 @@ class SudokuGA():
                 fittestIndex = idx
                 fitnessValue = puzFitness
             probs.append(puzFitness*100)
-        print(probs)
+        #print(probs)
         return (fitnessValue, fittestIndex, probs, population[fittestIndex]) 
 
 if __name__ == "__main__":
