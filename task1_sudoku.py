@@ -6,12 +6,49 @@ import time
 import random
 import math
 import numpy as np
-from numpy.random import choice
-random.seed(14)
 
+random.seed(54)
+
+#sample puzzles. Select the one to solve by entering below in
+# the puzzleProblem numpy array
+puzzleProblem2 = [
+        [0,0,0,3],
+        [0,0,0,2],
+        [1,0,0,0],
+        [4,0,0,0]
+        ]
+
+puzzleProblem3 = [[0,0,0,2,6,0,7,0,1],
+                 [6,8,0,0,7,0,0,9,0],
+                 [8,9,0,0,0,4,5,0,0],
+                 [0,2,0,1,0,0,0,4,0],
+                 [0,0,4,6,0,2,9,0,0],
+                 [0,5,0,0,0,3,0,2,8],
+                 [0,0,9,3,0,0,0,7,4],
+                 [0,4,0,0,5,0,0,3,6],
+                 [7,0,3,0,1,8,0,0,0]]
+
+puzzleProblem4 = [
+        [0,1,0,6,0,0,5,0,0,13,0,4,0,10,0,0],
+        [0,16,0,5,13,0,0,0,2,1,14,3,0,9,6,0],
+        [14,8,10,0,6,0,0,0,15,7,0,5,0,0,11,16],
+        [4,3,2,0,11,0,0,0,8,0,0,16,0,0,5,0],
+        [0,10,16,0,0,12,11,0,7,4,3,0,0,0,0,6],
+        [0,0,12,7,5,0,0,9,14,0,8,6,10,11,2,0],
+        [3,0,0,2,7,0,1,0,0,11,0,0,0,15,14,8],
+        [6,0,4,11,0,15,0,13,5,2,12,0,7,0,16,1],
+        [0,11,8,0,0,10,15,0,6,16,13,14,3,0,12,2],
+        [13,7,6,0,0,5,14,0,0,0,4,2,9,0,0,15],
+        [0,0,14,15,0,0,6,8,9,12,7,0,1,16,13,5],
+        [9,0,0,0,0,13,4,16,0,0,15,8,6,14,0,0],
+        [8,5,0,0,16,0,7,0,0,0,0,12,11,13,15,3],
+        [12,0,0,0,15,0,0,0,0,9,0,0,0,2,4,0],
+        [10,0,0,3,0,0,13,12,0,0,0,0,0,0,0,7],
+        [16,0,0,0,1,0,0,0,3,6,10,7,0,0,0,0]
+        ]
 #puzzle to solve, 0s indicate empty
-puzzleProblem = [[5,1,7,6,0,0,0,3,4],[2,8,9,0,0,4,0,0,0],[3,4,6,2,0,5,0,9,0],[6,0,2,0,0,0,0,1,0],[0,3,8,0,0,6,0,4,7],[0,0,0,0,0,0,0,0,0],[0,9,0,0,0,0,0,7,8],[7,0,3,4,0,0,5,6,0],[0,0,0,0,0,0,0,0,0]]
-puzzleProblem = np.array(puzzleProblem)
+
+puzzleProblem = np.array(puzzleProblem3)
 
 fixedValues = []
 #determine what the index of the 0 values of the puzzle are, for crossover
@@ -27,22 +64,35 @@ print(fixedValues)
 N = int(math.sqrt(len(puzzleProblem)))
 
 # SETUP PARAMS
-POPULATION_SIZE = 500
-NUM_GENERATIONS = 500
-MUTATION_RATE = 0.75
+POPULATION_SIZE = 1000
+NUM_GENERATIONS = 100
+MUTATION_RATE = 0.25
+CROSS_RATE = .75
 
 # initialize the population
 def populationGeneration(puzzle):
     pop = []
     for individual in range(0, POPULATION_SIZE):
-        newPuzzle = np.array(puzzle, copy=True)
+        newPuzzle = []
         for row in range(0, (N**2)):
+            puzRow = []
+            opts = list(range(1, N**2 + 1))
+            
+            #first only use available numbers
+            for col in puzzle[row]:
+                if col != 0:
+                    opts.pop(opts.index(col))
+                    
             for col in range(0,(N**2)):
-                if newPuzzle[row][col] == 0:
+                if puzzle[row][col] == 0:
                     # set a random float here
                     # we use floats to keep track of which values were added/can be modified
-                    newPuzzle[row][col] =float(random.randint(1, (N**2)))
-        pop.append(newPuzzle)
+                    puzRow.append(opts.pop(random.randint(0, len(opts) - 1)))
+                else: 
+                    puzRow.append(puzzle[row][col])
+            newPuzzle.append(puzRow)
+        pop.append(np.array(newPuzzle))
+
     return np.array(pop)
 
 #main class to solve the 
@@ -63,17 +113,18 @@ class SudokuGA():
         while not (self.terminate(fitnessEval[0], generation)):
             new_population = []
             
-            for puz in population:
+            for i in range(0, POPULATION_SIZE):
                 #select
-                parents = self.select(population, fitnessEval[2])
+                parent1,parent2 = self.select(population, fitnessEval[2], solution, fitnessEval[1])
                 
                 #crossover
-                newpuz = self.crossover(parents[0], parents[1])
+                newpuz, newpuz2 = self.crossover(parent1, parent2)
                 
                 #mutate
                 if ( random.uniform(0, 1.0) <= MUTATION_RATE):
                     newpuz = self.mutate(newpuz)
                     
+                new_population.append(newpuz2)
                 new_population.append(newpuz)
                 
             #new fitness
@@ -88,46 +139,59 @@ class SudokuGA():
         
     # if the algo should terminate
     def terminate(self, fitnessValue, generation):
-        return (fitnessValue >= 1.0 or generation >= NUM_GENERATIONS)
+        return (generation >= NUM_GENERATIONS or fitnessValue >= 1.0)
     
     # will return child
     def crossover(self, p1, p2):
-        rRange = range(0, random.randint(0, ((N**2) - 1)))
-        cRange = range(0, random.randint(0, ((N**2) - 1)))
-        
+        rRange = random.randint(0, len(np.concatenate(np.array(fixedValues)).ravel().tolist()))
+        #print(rRange)
         #p1[0:r]
         #p2[r:((N**2))]
         child = list(p1)
+        child2 = list(p2)
         
+        rc = 0
         #modify rows and columns according to ranges
-        for r in range(0, N**2):
-            for c in range(0, N**2):
-                if c in fixedValues[r] and (r in rRange or c in cRange):
-                    #can modify, select from p2
-                    child[r][c] = p2[r][c]
+        for ridx, row in enumerate(fixedValues):
+            for cidx, c in enumerate(row):
+                if rc >= rRange:
+                    #set the p1 to p2
+                    child[ridx][c] = p2[ridx][c]
+                    child2[ridx][c] = p1[ridx][c]
 
-        return np.array(child)
+                rc +=1
+                
+        return (np.array(child), np.array(child2))
 
     # mutate x
     def mutate(self, x):
-        rRange = random.randint(0, (len(fixedValues) - 1))
-        cRange = random.randint(0, (len(fixedValues[rRange]) - 1) )
         newPuzzle = x
-        newPuzzle[rRange][cRange] = random.randint(1, (N**2))
+        rowToChange = random.randint(0, N**2 - 1)
+        opts = fixedValues[rowToChange]
+        
+        if len(opts) >= 2:
+            drawCol = random.choices(population=opts, 
+                k=2)
+            
+            newPuzzle[rowToChange][drawCol[0]] = newPuzzle[rowToChange][drawCol[1]]
+        
         return newPuzzle
 
     #select 2 individuals to crossover
-    def select(self, population, probabilities):
-        K = 5
+    def select(self, population, probabilities, fittest,fittestIndex):
+        K = 10
         #print(probabilities)
-        draw = random.choices(population=population, 
+        matingpool = list(population)
+        matingpool.pop(fittestIndex)
+        probs = list(probabilities)
+        probs.pop(fittestIndex)
+        draw = random.choices(population=matingpool, 
                        k=K,
-             weights=probabilities)
+             weights=probs)
         
-        r1 = random.randint(0, K-1)
-        r2 = random.randint(0, K-1)
-
-        return [draw[r1], draw[r2]]
+        r1 = fittest
+        r2 = draw[random.randint(0, K-1)]
+        return (r1, r2)
 
     #find fitness of the indidividual puzzle
     def individualFitness(self, puz):
@@ -144,11 +208,13 @@ class SudokuGA():
                 puzError = puzError - 1
                 
         #check boxes
-        for br in range(0, (N**2),3):
-            for bc in range(0, (N**2), 3):
-                box = [puz[br][bc], puz[br][bc + 1],puz[br][bc + 2],
-                        puz[br + 1][bc],puz[br + 1][bc + 1], puz[br + 1][bc + 2], 
-                        puz[br + 2][bc], puz[br + 2][bc + 1], puz[br + 2][bc + 2] ]
+        for br in range(0, (N**2),N):
+            for bc in range(0, (N**2), N):
+                box = []
+                
+                for i in range(0, N):
+                    for z in range(0, N):
+                        box.append(puz[br + i][bc + z])
                 
                 if (N**2) == len(set(box)):
                     puzError = puzError - 1
@@ -165,9 +231,9 @@ class SudokuGA():
             if puzFitness >= fitnessValue:
                 fittestIndex = idx
                 fitnessValue = puzFitness
-            probs.append(puzFitness)
+            probs.append(puzFitness*100)
                 
-        return (fitnessValue, fittestIndex, probs) 
+        return (fitnessValue, fittestIndex, probs, population[fittestIndex]) 
 
 if __name__ == "__main__":
     startTime = time.time()
