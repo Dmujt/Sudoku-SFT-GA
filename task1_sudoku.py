@@ -6,7 +6,7 @@ import time
 import random
 import math
 import numpy as np
-
+from random import shuffle
 random.seed(54)
 
 #sample puzzles. Select the one to solve by entering below in
@@ -48,9 +48,10 @@ puzzleProblem4 = [
         ]
 #puzzle to solve, 0s indicate empty
 
-puzzleProblem = np.array(puzzleProblem3)
-
+puzzleProblem = np.array(puzzleProblem4)
+puzzleProblemT = puzzleProblem.T
 fixedValues = []
+fixedValuesT = []
 #determine what the index of the 0 values of the puzzle are, for crossover
 for r in puzzleProblem:
     rArr = []
@@ -58,16 +59,22 @@ for r in puzzleProblem:
         if c == 0:
             rArr.append(idx)
     fixedValues.append(rArr)
-    
+for r in puzzleProblemT:
+    rArr = []
+    for idx, c in enumerate(r):
+        if c == 0:
+            rArr.append(idx)
+    fixedValuesT.append(rArr)
 print(fixedValues)
+print(fixedValuesT)
+
 #get the size of the board
 N = int(math.sqrt(len(puzzleProblem)))
 
 # SETUP PARAMS
-POPULATION_SIZE = 1000
-NUM_GENERATIONS = 100
-MUTATION_RATE = 0.25
-CROSS_RATE = .75
+POPULATION_SIZE = 100
+NUM_GENERATIONS = 5000
+MUTATION_RATE = 0.5
 
 # initialize the population
 def populationGeneration(puzzle):
@@ -123,7 +130,7 @@ class SudokuGA():
                 #mutate
                 if ( random.uniform(0, 1.0) <= MUTATION_RATE):
                     newpuz = self.mutate(newpuz)
-                    
+                    newpuz2 = self.mutate(newpuz2)
                 new_population.append(newpuz2)
                 new_population.append(newpuz)
                 
@@ -143,23 +150,61 @@ class SudokuGA():
     
     # will return child
     def crossover(self, p1, p2):
-        rRange = random.randint(0, len(np.concatenate(np.array(fixedValues)).ravel().tolist()))
-        #print(rRange)
-        #p1[0:r]
-        #p2[r:((N**2))]
         child = list(p1)
         child2 = list(p2)
+        rowToCrossIdx =  random.randint(0, len(fixedValues) - 1)
+        rowToCross = fixedValues[rowToCrossIdx]
         
-        rc = 0
-        #modify rows and columns according to ranges
-        for ridx, row in enumerate(fixedValues):
-            for cidx, c in enumerate(row):
-                if rc >= rRange:
-                    #set the p1 to p2
-                    child[ridx][c] = p2[ridx][c]
-                    child2[ridx][c] = p1[ridx][c]
+        if len(rowToCross) > 1:
+            crossOverPoint = random.randint(0, len(rowToCross) - 1)
+            
+            child1Alleles = []
+            child2Alleles = []
+            for i in range(0, len(rowToCross)):
+                child1Alleles.append(child[rowToCrossIdx][fixedValues[rowToCrossIdx][i]])
+                child2Alleles.append(child2[rowToCrossIdx][fixedValues[rowToCrossIdx][i]])
+                
 
-                rc +=1
+            child1prev = child1Alleles[0:crossOverPoint]
+            child2prev = child2Alleles[0:crossOverPoint]
+            
+            child1end = child1Alleles[crossOverPoint:len(fixedValues) - 1]
+            child2end = child2Alleles[crossOverPoint:len(fixedValues) - 1]
+            
+            child1Alleles = child2prev + child2end
+            child2Alleles = child1prev + child1end
+                
+            #actually set the values
+            for i in range(0, len(child1Alleles)):
+                child[rowToCrossIdx][fixedValues[rowToCrossIdx][i]] = child1Alleles[i]
+                child2[rowToCrossIdx][fixedValues[rowToCrossIdx][i]] = child2Alleles[i]
+
+        colToCrossIdx =  random.randint(0, N**2 - 1)
+        colToCross = fixedValuesT[colToCrossIdx]
+        
+        if len(colToCross) > 1:
+            crossOverPoint = random.randint(0, len(rowToCross) - 1)
+            
+            child1Alleles = []
+            child2Alleles = []
+            for i in range(0, len(rowToCross)):
+                child1Alleles.append(child[rowToCrossIdx][fixedValues[rowToCrossIdx][i]])
+                child2Alleles.append(child2[rowToCrossIdx][fixedValues[rowToCrossIdx][i]])
+                
+
+            child1prev = child1Alleles[0:crossOverPoint]
+            child2prev = child2Alleles[0:crossOverPoint]
+            
+            child1end = child1Alleles[crossOverPoint:len(fixedValues) - 1]
+            child2end = child2Alleles[crossOverPoint:len(fixedValues) - 1]
+            
+            child1Alleles = child2prev + child2end
+            child2Alleles = child1prev + child1end
+                
+            #actually set the values
+            for i in range(0, len(child1Alleles)):
+                child[rowToCrossIdx][fixedValues[rowToCrossIdx][i]] = child1Alleles[i]
+                child2[rowToCrossIdx][fixedValues[rowToCrossIdx][i]] = child2Alleles[i]
                 
         return (np.array(child), np.array(child2))
 
