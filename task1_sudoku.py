@@ -50,7 +50,7 @@ puzzleProblem4 = [
         ]
 #puzzle to solve, 0s indicate empty
 
-puzzleProblem = np.array(puzzleProblem3)
+puzzleProblem = np.array(puzzleProblem4)
 
 fixedValues = []
 
@@ -68,9 +68,9 @@ print(fixedValues)
 N = int(math.sqrt(len(puzzleProblem)))
 
 # SETUP PARAMS
-POPULATION_SIZE = 1000
-NUM_GENERATIONS = 100
-MUTATION_RATE = 0.5
+POPULATION_SIZE = 100
+NUM_GENERATIONS = 1000
+MUTATION_RATE = 0.3
 
 # initialize the population
 def populationGeneration(puzzle):
@@ -149,9 +149,9 @@ class SudokuGA():
         
     # if the algo should terminate
     def terminate(self, fitnessValue, generation):
-        return (generation >= NUM_GENERATIONS or fitnessValue >= 1.0)
+        return (generation >= NUM_GENERATIONS)
     
-    # will return child
+    # will return 2 children
     def crossover(self, p1, p2):
         child = list(p1)
         child2 = list(p2)
@@ -222,7 +222,7 @@ class SudokuGA():
 
         return np.array(child)
 
-    #select 2 individuals to crossover
+    #select 2 individuals to crossover, tournament selection
     def select(self, population, probabilities, fittest, fittestIndex):
         K = 4
         
@@ -234,17 +234,6 @@ class SudokuGA():
         matingpopIdx = np.array(draw)
         parents = [matingpopIdx for _,matingpopIdx in sorted(zip(fitnessesactual,matingpopIdx))]
         
-        #print(probabilities)
-        #matingpool = list(population)
-        #matingpool.pop(fittestIndex)
-        #probs = list(probabilities)
-        #probs.pop(fittestIndex)
-        #draw = random.choices(population=matingpool, 
-        #               k=K,
-        #     weights=probs)
-       
-        #r1 = fittest
-        #r2 = draw[random.randint(0, K-1)]
         return (population[parents[-1]],population[parents[-2]])
 
     #find fitness of the indidividual puzzle
@@ -277,7 +266,7 @@ class SudokuGA():
             p = 0.00000000000000000000001
         return p
     
-    #find fitness individual
+    #find fittest individual
     def fitness(self, population):
         fittestIndex = 0
         fitnessValue = 0 #want to get the lowest
