@@ -1,4 +1,4 @@
-# Sudoko-SFT-GA
+# Sudoku-SFT-GA
 Implementation of a Sudoku puzzle solver (Task 1) with a GA and a Santa Fe Ant Trail problem with a GP (Task 2).
 
 ### Task 1
