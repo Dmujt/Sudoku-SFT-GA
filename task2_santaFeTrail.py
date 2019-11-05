@@ -106,8 +106,8 @@ class AntSimulator(object):
         self.matrix_col = len(self.matrix[0])
         self.matrix_exc = copy.deepcopy(self.matrix)
 
+#define number of moves
 ant = AntSimulator(600)
-
 pset = gp.PrimitiveSet("MAIN", 0)
 pset.addPrimitive(ant.if_food_ahead, 2)
 pset.addPrimitive(prog2, 2)
@@ -116,7 +116,9 @@ pset.addTerminal(ant.move_forward)
 pset.addTerminal(ant.turn_left)
 pset.addTerminal(ant.turn_right)
 
+#max fitness
 creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+#individual trees
 creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMax, pset=pset)
 
 toolbox = base.Toolbox()
@@ -133,6 +135,7 @@ def evalArtificialAnt(individual):
     return ant.eaten,
 
 toolbox.register("evaluate", evalArtificialAnt)
+#Tournament selection with K=7
 toolbox.register("select", tools.selTournament, tournsize=7)
 toolbox.register("mate", gp.cxOnePoint)
 toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)

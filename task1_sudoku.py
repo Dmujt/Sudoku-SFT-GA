@@ -151,7 +151,7 @@ class SudokuGA():
     def terminate(self, fitnessValue, generation):
         return (generation >= NUM_GENERATIONS)
     
-    # will return child
+    # will return 2 children
     def crossover(self, p1, p2):
         child = list(p1)
         child2 = list(p2)
@@ -222,7 +222,7 @@ class SudokuGA():
 
         return np.array(child)
 
-    #select 2 individuals to crossover
+    #select 2 individuals to crossover, tournament selection
     def select(self, population, probabilities, fittest, fittestIndex):
         K = 4
         
@@ -266,7 +266,7 @@ class SudokuGA():
             p = 0.00000000000000000000001
         return p
     
-    #find fitness individual
+    #find fittest individual
     def fitness(self, population):
         fittestIndex = 0
         fitnessValue = 0 #want to get the lowest
